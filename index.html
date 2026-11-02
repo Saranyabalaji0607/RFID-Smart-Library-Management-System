@@ -1,1 +1,272 @@
 
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Smart Library Management System</title>
+<style>
+body {
+    font-family: Arial, sans-serif;
+    background: #f2f5fa;
+    margin: 0;
+    padding: 20px;
+    color: #222;
+}
+.container {
+    max-width: 950px;
+    margin: auto;
+}
+header {
+    background: #253b80;
+    color: white;
+    padding: 25px;
+    text-align: center;
+    border-radius: 12px;
+}
+.card {
+    background: white;
+    padding: 20px;
+    margin-top: 20px;
+    border-radius: 10px;
+    box-shadow: 0 2px 8px #ddd;
+}
+input {
+    padding: 11px;
+    margin: 7px 0;
+    width: 95%;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+}
+button {
+    background: #253b80;
+    color: white;
+    border: none;
+    padding: 11px 18px;
+    border-radius: 5px;
+    cursor: pointer;
+    margin: 5px;
+}
+button:hover {
+    background: #4169b2;
+}
+table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 15px;
+}
+th, td {
+    padding: 10px;
+    border: 1px solid #ddd;
+    text-align: left;
+}
+th {
+    background: #253b80;
+    color: white;
+}
+#message {
+    font-weight: bold;
+    color: green;
+    margin-top: 10px;
+}
+</style>
+</head>
+
+<body>
+<div class="container">
+
+<header>
+    <h1>RFID-Based Smart Library Management System</h1>
+    <p>Book Catalog, Issue and Return Management</p>
+</header>
+
+<div class="card">
+    <h2>Library Dashboard</h2>
+    <p>Total Books: <span id="total">0</span></p>
+    <p>Available Books: <span id="available">0</span></p>
+    <p>Issued Books: <span id="issued">0</span></p>
+</div>
+
+<div class="card">
+    <h2>Add New Book</h2>
+    <input type="text" id="bookTitle" placeholder="Book Name">
+    <input type="text" id="author" placeholder="Author Name">
+    <input type="text" id="rfid" placeholder="RFID Tag ID">
+    <button onclick="addBook()">Add Book</button>
+</div>
+
+<div class="card">
+    <h2>Search Books</h2>
+    <input type="text" id="search" placeholder="Search by book name or RFID ID" oninput="displayBooks()">
+</div>
+
+<div class="card">
+    <h2>Issue Book</h2>
+    <input type="text" id="issueRfid" placeholder="Enter RFID Tag ID">
+    <input type="text" id="student" placeholder="Student Name">
+    <input type="date" id="returnDate">
+    <button onclick="issueBook()">Issue Book</button>
+</div>
+
+<div class="card">
+    <h2>Return Book</h2>
+    <input type="text" id="returnRfid" placeholder="Enter RFID Tag ID">
+    <button onclick="returnBook()">Return Book</button>
+</div>
+
+<div class="card">
+    <h2>Book Catalog</h2>
+    <table>
+        <thead>
+            <tr>
+                <th>Book</th>
+                <th>Author</th>
+                <th>RFID ID</th>
+                <th>Status</th>
+                <th>Student</th>
+                <th>Return Date</th>
+            </tr>
+        </thead>
+        <tbody id="bookList"></tbody>
+    </table>
+    <p id="message"></p>
+</div>
+
+</div>
+
+<script>
+let books = JSON.parse(localStorage.getItem("libraryBooks")) || [];
+
+function saveBooks() {
+    localStorage.setItem("libraryBooks", JSON.stringify(books));
+}
+
+function showMessage(message) {
+    document.getElementById("message").textContent = message;
+}
+
+function addBook() {
+    let title = document.getElementById("bookTitle").value.trim();
+    let author = document.getElementById("author").value.trim();
+    let rfid = document.getElementById("rfid").value.trim();
+
+    if (!title || !author || !rfid) {
+        showMessage("Please fill all book details.");
+        return;
+    }
+
+    if (books.some(book => book.rfid === rfid)) {
+        showMessage("This RFID ID already exists.");
+        return;
+    }
+
+    books.push({
+        title: title,
+        author: author,
+        rfid: rfid,
+        status: "Available",
+        student: "-",
+        returnDate: "-"
+    });
+
+    saveBooks();
+    displayBooks();
+
+    document.getElementById("bookTitle").value = "";
+    document.getElementById("author").value = "";
+    document.getElementById("rfid").value = "";
+
+    showMessage("Book added successfully!");
+}
+
+function issueBook() {
+    let rfid = document.getElementById("issueRfid").value.trim();
+    let student = document.getElementById("student").value.trim();
+    let date = document.getElementById("returnDate").value;
+
+    let book = books.find(book => book.rfid === rfid);
+
+    if (!book) {
+        showMessage("Book not found. Check RFID ID.");
+        return;
+    }
+
+    if (book.status === "Issued") {
+        showMessage("This book is already issued.");
+        return;
+    }
+
+    if (!student || !date) {
+        showMessage("Enter student name and return date.");
+        return;
+    }
+
+    book.status = "Issued";
+    book.student = student;
+    book.returnDate = date;
+
+    saveBooks();
+    displayBooks();
+    showMessage("Book issued successfully!");
+}
+
+function returnBook() {
+    let rfid = document.getElementById("returnRfid").value.trim();
+    let book = books.find(book => book.rfid === rfid);
+
+    if (!book) {
+        showMessage("Book not found.");
+        return;
+    }
+
+    if (book.status === "Available") {
+        showMessage("This book is already available.");
+        return;
+    }
+
+    book.status = "Available";
+    book.student = "-";
+    book.returnDate = "-";
+
+    saveBooks();
+    displayBooks();
+    showMessage("Book returned successfully!");
+}
+
+function displayBooks() {
+    let list = document.getElementById("bookList");
+    let search = document.getElementById("search").value.toLowerCase();
+
+    list.innerHTML = "";
+
+    let filteredBooks = books.filter(book =>
+        book.title.toLowerCase().includes(search) ||
+        book.rfid.toLowerCase().includes(search)
+    );
+
+    filteredBooks.forEach(book => {
+        let row = document.createElement("tr");
+
+        [book.title, book.author, book.rfid,
+         book.status, book.student, book.returnDate].forEach(value => {
+            let cell = document.createElement("td");
+            cell.textContent = value;
+            row.appendChild(cell);
+        });
+
+        list.appendChild(row);
+    });
+
+    document.getElementById("total").textContent = books.length;
+    document.getElementById("available").textContent =
+        books.filter(book => book.status === "Available").length;
+    document.getElementById("issued").textContent =
+        books.filter(book => book.status === "Issued").length;
+}
+
+displayBooks();
+</script>
+
+</body>
+</html>
+
